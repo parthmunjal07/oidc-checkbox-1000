@@ -341,7 +341,7 @@
         progressBar.style.width = pct + '%';
     }
 
-    const socket = io('http://localhost:8000');
+    const socket = io()
 
     socket.on('connect', () => {
         socketDot.classList.remove('disconnected');

@@ -237,6 +237,32 @@
             letter-spacing: 0.15em;
             text-transform: uppercase;
         }
+        /* Toast Notification System */
+        .toast {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            background: var(--panel);
+            border: 1px solid var(--accent2);
+            color: var(--accent2);
+            padding: 1rem 1.5rem;
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            box-shadow: 0 0 15px rgba(255, 45, 120, 0.2);
+            z-index: 1000;
+    
+            /* Hidden state */
+            transform: translateX(120%);
+            opacity: 0;
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+        }
+
+        .toast.show {
+            /* Visible state */
+            transform: translateX(0);
+            opacity: 1;
+        }
     </style>
 </head>
 <body>
@@ -270,7 +296,8 @@
     <div class="grid" id="grid"></div>
 </div>
 
-<footer>1000 checkboxes with sockets &mdash; local state active</footer>
+<footer>1000 checkboxes with sockets : local state active</footer>
+<div id="toast" class="toast"></div>
 
 <script>
     const TOTAL = 1000;
@@ -327,8 +354,54 @@
         socketDot.classList.add('disconnected');
         socketLabel.textContent = 'DISCONNECTED';
     });
-    
 
+    function socketSend(index, checked) {
+        socket.emit('client:checkbox:change', {
+            index: index,
+            checked: checked
+        });
+    }
+
+    socket.on('server:checkbox:status', (stateArray) => {
+        stateArray.forEach((isChecked, i) => {
+            if (checks[i] && isChecked !== null) {
+                checks[i].checked = isChecked;
+            }
+        });
+        updateStats();
+    });
+
+    socket.on('server:checkbox:change', (data) => {
+        if (checks[data.index]) {
+            checks[data.index].checked = data.checked;
+            updateStats();
+        }
+    });
+
+    const toast = document.getElementById('toast');
+    let toastTimeout;
+
+    function showToast(message) {
+        toast.textContent = message;
+        toast.classList.add('show');
+        
+        clearTimeout(toastTimeout);
+        
+        toastTimeout = setTimeout(() => {
+            toast.classList.remove('show');
+        }, 3000);
+    }
+
+    socket.on('server:error', (error) => {
+        console.warn(error.message);
+        
+        if (error.data) {
+            checks[error.data.index].checked = !error.data.checked;
+            updateStats();
+        }
+        
+        showToast(error.message);
+    });
     
 </script>
 </body>

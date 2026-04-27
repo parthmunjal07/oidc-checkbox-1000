@@ -1,4 +1,6 @@
 import http from 'node:http'
+import path from 'node:path'
+
 import express from 'express'
 import { Server } from 'socket.io';
 
@@ -18,6 +20,7 @@ async function main(){
 
     const CHECKBOX_COUNT = 1000;
     const checkboxes = new Array(CHECKBOX_COUNT).fill(null);
+    const rateLimitingHashMap = new Map();
 
     const io = new Server()
     io.attach(server)
@@ -45,6 +48,8 @@ async function main(){
             io.emit("server:checkbox:change", data);
         })
     })
+
+    app.use(express.static(path.resolve('./public')))
 
     server.listen(PORT, () => {
         console.log(`server is running on http://localhost:${PORT}`);

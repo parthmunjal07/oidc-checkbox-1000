@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>1000 Checkboxes</title>
+    <script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap');
 
@@ -313,6 +314,19 @@
         progressBar.style.width = pct + '%';
     }
 
+    const socket = io('http://localhost:8000');
+
+    socket.on('connect', () => {
+        socketDot.classList.remove('disconnected');
+        socketDot.classList.add('connected');
+        socketLabel.textContent = 'CONNECTED';
+    })
+
+    socket.on('disconnect', () => {
+        socketDot.classList.remove('connected');
+        socketDot.classList.add('disconnected');
+        socketLabel.textContent = 'DISCONNECTED';
+    });
     
 
     

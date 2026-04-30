@@ -37,9 +37,7 @@ async function main() {
 
     const CHECKBOX_COUNT = 1000;
     const checkboxes: (boolean | null)[] = new Array(CHECKBOX_COUNT).fill(null);
-    
     const rateLimitingHashMap = new Map<string, number>();
-
     const io = new Server<ClientToServerEvents, ServerToClientEvents>(server);
 
     io.on('connection', (socket) => {

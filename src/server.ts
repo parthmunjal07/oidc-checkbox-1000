@@ -2,6 +2,8 @@ import http from 'node:http';
 import path from 'node:path';
 import express, { type Request, type Response } from 'express';
 import { Server } from 'socket.io';
+import jose from "node-jose"
+import { PUBLIC_KEY } from './utils/cert.js';
 
 
 export interface CheckboxData {
@@ -35,6 +37,8 @@ async function main() {
         res.json({ health: true });
     });
 
+    // socket logic part
+
     const CHECKBOX_COUNT = 1000;
     const checkboxes: (boolean | null)[] = new Array(CHECKBOX_COUNT).fill(null);
     const rateLimitingHashMap = new Map<string, number>();
@@ -65,6 +69,23 @@ async function main() {
     });
 
     app.use(express.static(path.resolve('./public')));
+
+    // oidc-auth part
+
+    app.get("/.well-known/openid-configuration", (req, res) => {
+        const ISSUER = `http://localhost:${PORT}`;
+        return res.json({
+            issuer: ISSUER,
+            authorization_endpoint: `${ISSUER}/o/authenticate`,
+            userinfo_endpoint: `${ISSUER}/o/userinfo`,
+            jwks_uri: `${ISSUER}/.well-known/jwks.json`,
+        });
+    });
+
+    app.get("/.well-known/jwks.json", async (_, res) => {
+      const key = await jose.JWK.asKey(PUBLIC_KEY, "pem");
+      return res.json({ keys: [key.toJSON()] });
+    });
 
     server.listen(PORT, () => {
         console.log(`Server is running on http://localhost:${PORT}`);

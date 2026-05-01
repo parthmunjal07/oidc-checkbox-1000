@@ -34,6 +34,7 @@ export interface ClientToServerEvents {
 async function main() {
     const app = express();
     app.use(express.json());
+    app.use(express.static(path.resolve('./public')));
 
     const server = http.createServer(app);
     const PORT = process.env.PORT || 8181;

@@ -3,7 +3,8 @@ import {
     renderSignupPage, 
     renderAuthenticatePage, 
     handleSignIn, 
-    handleSignUp 
+    handleSignUp,
+    checkAuthStatus
 } from './auth.controller.js';
 
 const authRouter = Router();
@@ -11,7 +12,9 @@ const authRouter = Router();
 authRouter.get('/signup', renderSignupPage);
 authRouter.get('/authenticate', renderAuthenticatePage);
 
-authRouter.post('/register', handleSignUp);
+authRouter.post('/signup', handleSignUp);
 authRouter.post('/login', handleSignIn);
+
+authRouter.get('/status', checkAuthStatus);
 
 export default authRouter;

@@ -18,6 +18,7 @@
             --text: #c0c0d8;
             --dim: #444466;
             --glow: 0 0 8px #00ffcc88;
+            --glow-error: 0 0 8px rgba(255, 45, 120, 0.6);
         }
 
         *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -75,6 +76,32 @@
             color: var(--dim);
             letter-spacing: 0.2em;
             text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .auth-link {
+            color: var(--accent2);
+            text-decoration: none;
+            border: 1px solid var(--accent2);
+            padding: 0.2rem 0.5rem;
+            transition: all 0.2s;
+        }
+        
+        .auth-link.granted {
+            color: var(--accent);
+            border-color: var(--accent);
+        }
+
+        .auth-link:hover {
+            background: rgba(255, 45, 120, 0.1);
+            box-shadow: var(--glow-error);
+        }
+
+        .auth-link.granted:hover {
+            background: rgba(0, 255, 204, 0.1);
+            box-shadow: var(--glow);
         }
 
         .stats-bar {
@@ -126,7 +153,6 @@
             transition: width 0.3s ease;
         }
 
-
         .grid-wrap {
             width: 100%;
             max-width: 1100px;
@@ -139,7 +165,6 @@
             gap: 6px;
         }
 
-        /* Custom checkbox */
         .cb-wrap {
             position: relative;
             width: 36px;
@@ -164,9 +189,6 @@
             cursor: pointer;
             transition: border-color 0.15s, background 0.15s, box-shadow 0.15s;
             position: relative;
-            font-size: 0.5rem;
-            color: var(--dim);
-            user-select: none;
         }
 
         .cb-wrap label::after {
@@ -196,7 +218,6 @@
             border-color: var(--accent);
         }
 
-        /* pop animation on check */
         .cb-wrap input:checked + label {
             animation: pop 0.18s ease;
         }
@@ -207,7 +228,6 @@
             100% { transform: scale(1); }
         }
 
-        /* socket indicator */
         #socket-status {
             display: inline-flex;
             align-items: center;
@@ -237,7 +257,7 @@
             letter-spacing: 0.15em;
             text-transform: uppercase;
         }
-        /* Toast Notification System */
+
         .toast {
             position: fixed;
             bottom: 2rem;
@@ -249,17 +269,14 @@
             font-size: 0.75rem;
             letter-spacing: 0.1em;
             text-transform: uppercase;
-            box-shadow: 0 0 15px rgba(255, 45, 120, 0.2);
+            box-shadow: var(--glow-error);
             z-index: 1000;
-    
-            /* Hidden state */
             transform: translateX(120%);
             opacity: 0;
             transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
         }
 
         .toast.show {
-            /* Visible state */
             transform: translateX(0);
             opacity: 1;
         }
@@ -269,7 +286,10 @@
 
 <header>
     <h1>1000 <span>Checkboxes</span></h1>
-    <div class="subtitle">Real-time · WebSocket · Shared State</div>
+    <div class="subtitle">
+        <span>Real-time · WebSocket · Shared State</span>
+        <a href="/authenticate.html" id="auth-ui-link" class="auth-link">CLEARANCE: REQUIRED</a>
+    </div>
 </header>
 
 <div class="stats-bar">
@@ -308,6 +328,26 @@
     const progressBar = document.getElementById('progress-bar');
     const socketDot = document.getElementById('socket-dot');
     const socketLabel = document.getElementById('socket-label');
+    const authUiLink = document.getElementById('auth-ui-link');
+
+    let isAuthenticated = false;
+
+    async function checkAuthStatus() {
+        try {
+            const response = await fetch('/auth/status'); 
+            if (response.ok) {
+                isAuthenticated = true;
+                authUiLink.textContent = "CLEARANCE: GRANTED";
+                authUiLink.classList.add('granted');
+                authUiLink.href = "#"; 
+                authUiLink.title = "You are authenticated";
+            }
+        } catch (error) {
+            console.log("Not authenticated or server unreachable.");
+        }
+    }
+
+    checkAuthStatus();
 
     const checks = [];
     for (let i = 0; i < TOTAL; i++) {
@@ -326,7 +366,15 @@
         grid.appendChild(wrap);
         checks.push(input);
 
+        input.addEventListener('click', (e) => {
+            if (!isAuthenticated) {
+                e.preventDefault(); 
+                showToast("ACCESS DENIED: PLEASE LOGIN TO INTERACT");
+            }
+        });
+
         input.addEventListener('change', () => {
+            if (!isAuthenticated) return;
             updateStats();
             socketSend(i, input.checked);
         });
@@ -402,7 +450,6 @@
         
         showToast(error.message);
     });
-    
 </script>
 </body>
 </html>

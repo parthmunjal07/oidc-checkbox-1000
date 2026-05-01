@@ -36,22 +36,24 @@ export const handleSignIn = async (req: Request, res: Response) => {
         return res.status(401).json({message : "Incorrect Password"})
     }
 
-    const ISSUER = `http://localhost:${process.env.PORT}`;
+    const ISSUER = `http://localhost:${process.env.PORT || 3000}`;
     const now = Math.floor(Date.now() / 1000);
 
     const claims: JWTClaims = {
-    iss: ISSUER,
-    sub: user.id,
-    email: user.email,
-    email_verified: Boolean(user.emailVerified),
-    exp: now + 3600,
-    name: user.name ?? "",
-    picture: user.profileImageURL ?? "",
+        iss: ISSUER,
+        sub: user.id,
+        email: user.email,
+        email_verified: Boolean(user.emailVerified),
+        exp: now + 3600,
+        name: user.name ?? "",
+        picture: user.profileImageURL ?? "",
   };
 
   const token = JWT.sign(claims, PRIVATE_KEY, { algorithm: "RS256" });
-  return res.json({ token });
+  
+  res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Path=/; Max-Age=3600; SameSite=Strict`);
 
+  return res.json({ token });
 }
 
 export const handleSignUp = async (req: Request, res: Response) => {
@@ -89,3 +91,25 @@ export const handleSignUp = async (req: Request, res: Response) => {
 
   res.status(201).json({ ok: true });
 }
+
+export const checkAuthStatus = async (req: Request, res: Response) => {
+    try {
+        const cookieHeader = req.headers.cookie;
+        let token = null;
+        
+        if (cookieHeader) {
+            const match = cookieHeader.match(new RegExp('(^| )token=([^;]+)'));
+            if (match) token = match[2];
+        }
+
+        if (!token) {
+            return res.status(401).json({ message: "Unauthorized: No token provided" });
+        }
+
+        JWT.verify(token, PRIVATE_KEY); 
+
+        return res.status(200).json({ authenticated: true });
+    } catch (error) {
+        return res.status(401).json({ message: "Unauthorized: Invalid or expired token" });
+    }
+};

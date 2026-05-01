@@ -4,7 +4,12 @@ import express, { type Request, type Response } from 'express';
 import { Server } from 'socket.io';
 import jose from "node-jose"
 import { PUBLIC_KEY } from './utils/cert.js';
-
+import authRouter from './auth/auth.routes.js';
+import JWT from 'jsonwebtoken'
+import type { JWTClaims } from './utils/jwt.js';
+import { usersTable } from './db/schema.js';
+import { eq } from 'drizzle-orm';
+import { db } from './db/index.js';
 
 export interface CheckboxData {
     index: number;
@@ -31,7 +36,7 @@ async function main() {
     app.use(express.json());
 
     const server = http.createServer(app);
-    const PORT = process.env.PORT || 8000;
+    const PORT = process.env.PORT || 8181;
 
     app.get('/health', (req: Request, res: Response) => {
         res.json({ health: true });
@@ -43,6 +48,22 @@ async function main() {
     const checkboxes: (boolean | null)[] = new Array(CHECKBOX_COUNT).fill(null);
     const rateLimitingHashMap = new Map<string, number>();
     const io = new Server<ClientToServerEvents, ServerToClientEvents>(server);
+
+    io.use((socket, next) => {
+    const token = socket.handshake.auth.token;
+
+    if (!token) {
+        return next(new Error("Authentication error: No token provided"));
+    }
+
+    try {
+        const decoded = JWT.verify(token, PUBLIC_KEY, { algorithms: ["RS256"] });
+        (socket as any).user = decoded; 
+        next();
+    } catch (err) {
+        return next(new Error("Authentication error: Invalid or expired token"));
+    }
+});
 
     io.on('connection', (socket) => {
         console.log("Socket connected", { id: socket.id });
@@ -85,6 +106,51 @@ async function main() {
     app.get("/.well-known/jwks.json", async (_, res) => {
       const key = await jose.JWK.asKey(PUBLIC_KEY, "pem");
       return res.json({ keys: [key.toJSON()] });
+    });
+
+    app.post("/o", authRouter)
+
+    app.get("/o/userinfo", async (req, res) => {
+  const authHeader = req.headers.authorization;
+
+  if (!authHeader?.startsWith("Bearer ")) {
+    res
+      .status(401)
+      .json({ message: "Missing or invalid Authorization header." });
+    return;
+  }
+
+  const token = authHeader.slice(7);
+
+  let claims: JWTClaims;
+  try {
+    claims = JWT.verify(token, PUBLIC_KEY, {
+      algorithms: ["RS256"],
+    }) as JWTClaims;
+  } catch {
+    res.status(401).json({ message: "Invalid or expired token." });
+    return;
+  }
+
+  const [user] = await db
+    .select()
+    .from(usersTable)
+    .where(eq(usersTable.id, claims.sub))
+    .limit(1);
+
+        if (!user) {
+          res.status(404).json({ message: "User not found." });
+          return;
+        }
+
+        res.json({
+            sub: user.id,
+            email: user.email,
+            email_verified: user.emailVerified,
+            given_name: user.name,
+            name: user.name,
+            picture: user.profileImageURL,
+        });
     });
 
     server.listen(PORT, () => {

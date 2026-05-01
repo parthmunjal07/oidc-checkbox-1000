@@ -4,8 +4,10 @@
   "description": "",
   "main": "server.js",
   "scripts": {
-    "dev": "tsc-watch --onSuccess \"node dist/server\"",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "db:migrate": "drizzle-kit migrate",
+    "db:generate": "drizzle-kit generate",
+    "db:studio": "drizzle-kit studio",
+    "dev": "tsc-watch --onSuccess \"node dist/server\""
   },
   "keywords": [],
   "author": "",

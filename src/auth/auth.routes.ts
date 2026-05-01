@@ -6,12 +6,12 @@ import {
     handleSignUp 
 } from './auth.controller.js';
 
-const router = Router();
+const authRouter = Router();
 
-router.get('/signup', renderSignupPage);
-router.get('/authenticate', renderAuthenticatePage);
+authRouter.get('/signup', renderSignupPage);
+authRouter.get('/authenticate', renderAuthenticatePage);
 
-router.post('/register', handleSignUp);
-router.post('/login', handleSignIn);
+authRouter.post('/register', handleSignUp);
+authRouter.post('/login', handleSignIn);
 
-export default router;
+export default authRouter;

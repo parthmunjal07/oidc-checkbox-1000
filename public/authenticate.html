@@ -1,0 +1,218 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login - 1000 Checkboxes</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=Bebas+Neue&display=swap');
+
+        :root {
+            --bg: #0a0a0f;
+            --panel: #10101a;
+            --border: #1e1e30;
+            --accent: #00ffcc;
+            --accent2: #ff2d78;
+            --text: #c0c0d8;
+            --dim: #444466;
+            --glow: 0 0 8px #00ffcc88;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+        body {
+            background: var(--bg);
+            color: var(--text);
+            font-family: 'Share Tech Mono', monospace;
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2rem;
+        }
+
+        /* scanline overlay */
+        body::before {
+            content: '';
+            position: fixed;
+            inset: 0;
+            background: repeating-linear-gradient(
+                to bottom,
+                transparent 0px,
+                transparent 3px,
+                rgba(0,0,0,0.08) 3px,
+                rgba(0,0,0,0.08) 4px
+            );
+            pointer-events: none;
+            z-index: 999;
+        }
+
+        .auth-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+            padding: 2.5rem 2rem;
+            width: 100%;
+            max-width: 420px;
+            position: relative;
+            z-index: 10;
+        }
+
+        h2 {
+            font-family: 'Bebas Neue', sans-serif;
+            font-size: 3rem;
+            letter-spacing: 0.08em;
+            color: #fff;
+            line-height: 1;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        h2 span {
+            color: var(--accent);
+            text-shadow: var(--glow);
+        }
+
+        .subtitle {
+            font-size: 0.75rem;
+            color: var(--dim);
+            letter-spacing: 0.2em;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 2rem;
+        }
+
+        .error {
+            background: rgba(255, 45, 120, 0.06);
+            border: 1px solid var(--accent2);
+            color: var(--accent2);
+            padding: 0.8rem;
+            font-size: 0.75rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            text-align: center;
+            margin-bottom: 1.5rem;
+            display: none;
+            box-shadow: 0 0 8px rgba(255, 45, 120, 0.2);
+        }
+
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
+
+        label {
+            display: block;
+            font-size: 0.75rem;
+            color: var(--text);
+            letter-spacing: 0.15em;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        input {
+            width: 100%;
+            background: var(--bg);
+            border: 1px solid var(--border);
+            color: #fff;
+            padding: 0.8rem 1rem;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.2s, box-shadow 0.2s;
+        }
+
+        input:focus {
+            border-color: var(--accent);
+            box-shadow: var(--glow);
+        }
+
+        button {
+            width: 100%;
+            background: rgba(0, 255, 204, 0.06);
+            border: 1px solid var(--accent);
+            color: var(--accent);
+            padding: 1rem;
+            font-family: 'Share Tech Mono', monospace;
+            font-size: 1.1rem;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 1rem;
+        }
+
+        button:hover {
+            background: var(--accent);
+            color: var(--bg);
+            box-shadow: var(--glow);
+        }
+
+        .footer {
+            margin-top: 2rem;
+            text-align: center;
+            font-size: 0.75rem;
+            color: var(--dim);
+            letter-spacing: 0.1em;
+        }
+
+        .footer a {
+            color: var(--accent);
+            text-decoration: none;
+            transition: text-shadow 0.2s;
+        }
+
+        .footer a:hover {
+            text-shadow: var(--glow);
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-panel">
+        <h2>SYSTEM <span>LOGIN</span></h2>
+        <div class="subtitle">Authenticate to continue</div>
+        
+        <div id="error-message" class="error">Invalid credentials. Access denied.</div>
+        
+        <form id="login-form">
+            <div class="form-group">
+                <label for="email">User Email</label>
+                <input type="email" id="email" required autocomplete="email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" required autocomplete="current-password">
+            </div>
+            <button type="submit">Initialize Session</button>
+        </form>
+        
+        <div class="footer">
+            No active clearance? <a href="/public/signup.html">Request Access</a>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('login-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const errorDiv = document.getElementById('error-message');
+
+            try {
+                const response = await fetch('/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password })
+                });
+
+                if (response.ok) {
+                    window.location.href = '/';
+                } else {
+                    errorDiv.style.display = 'block';
+                }
+            } catch (err) {
+                console.error('Login error:', err);
+                errorDiv.style.display = 'block';
+            }
+        });
+    </script>
+</body>
+</html>

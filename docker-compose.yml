@@ -5,7 +5,7 @@ services:
     ports:
       - "5429:5432"
     environment:
-      POSTGRES_USER: admin
+      POSTGRES_USER: parth
       POSTGRES_PASSWORD: admin
       POSTGRES_DB: oidc_auth
     volumes:

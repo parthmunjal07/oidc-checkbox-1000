@@ -1,3 +1,4 @@
+import 'dotenv/config';
 export interface CheckboxData {
     index: number;
     checked: boolean;

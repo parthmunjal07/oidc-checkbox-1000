@@ -10,6 +10,9 @@ import type { JWTClaims } from './utils/jwt.js';
 import { usersTable } from './db/schema.js';
 import { eq } from 'drizzle-orm';
 import { db } from './db/index.js';
+import 'dotenv/config';
+import { createClient } from 'redis';
+import { createAdapter } from '@socket.io/redis-adapter';
 
 export interface CheckboxData {
     index: number;
@@ -45,9 +48,28 @@ async function main() {
     // socket logic part
 
     const CHECKBOX_COUNT = 1000;
-    const checkboxes: (boolean | null)[] = new Array(CHECKBOX_COUNT).fill(null);
-    const rateLimitingHashMap = new Map<string, number>();
+    
+    if (!process.env.REDIS_URL) {
+        throw new Error("REDIS_URL environment variable is not set");
+    }
+
+    const redisClient = createClient({ url: process.env.REDIS_URL });
+    redisClient.on('error', (err) => console.log('Redis Client Error', err));
+    
+    const pubClient = redisClient.duplicate();
+    pubClient.on('error', (err) => console.log('Redis Pub Client Error', err));
+
+    const subClient = redisClient.duplicate();
+    subClient.on('error', (err) => console.log('Redis Sub Client Error', err));
+
+    await Promise.all([
+        redisClient.connect(),
+        pubClient.connect(),
+        subClient.connect()
+    ]);
+
     const io = new Server<ClientToServerEvents, ServerToClientEvents>(server);
+    io.adapter(createAdapter(pubClient, subClient));
 
     io.use((socket, next) => {
     let token = socket.handshake.auth.token;
@@ -70,27 +92,38 @@ async function main() {
     }
 });
 
-    io.on('connection', (socket) => {
+    io.on('connection', async (socket) => {
         console.log("Socket connected", { id: socket.id });
         
-        socket.emit("server:checkbox:status", checkboxes);
+        try {
+            const stateHash = await redisClient.hGetAll("checkbox_state");
+            const checkboxes: (boolean | null)[] = new Array(CHECKBOX_COUNT).fill(null);
+            for (const [index, value] of Object.entries(stateHash)) {
+                checkboxes[parseInt(index)] = value === '1';
+            }
+            socket.emit("server:checkbox:status", checkboxes);
+        } catch (error) {
+            console.error("Error fetching initial state from Redis:", error);
+        }
 
-        socket.on("client:checkbox:change", (data: CheckboxData) => {
+        socket.on("client:checkbox:change", async (data: CheckboxData) => {
             console.log(`Received checkbox change from client: ${socket.id}, Data:`, data);
             
-            let lastOperationTime = rateLimitingHashMap.get(socket.id);
-            if (lastOperationTime && (lastOperationTime + 2000 > Date.now())) {
-                socket.emit("server:error", { 
-                    data, 
-                    message: "You are doing that too much. Please wait a moment before trying again." 
-                });
-                return;
+            try {
+                const lock = await redisClient.set(`ratelimit:${socket.id}`, '1', { NX: true, PX: 2000 });
+                if (!lock) {
+                    socket.emit("server:error", { 
+                        data, 
+                        message: "You are doing that too much. Please wait a moment before trying again." 
+                    });
+                    return;
+                }
+                
+                await redisClient.hSet("checkbox_state", data.index.toString(), data.checked ? '1' : '0');
+                io.emit("server:checkbox:change", data);
+            } catch (error) {
+                console.error("Error processing checkbox change:", error);
             }
-            
-            rateLimitingHashMap.set(socket.id, Date.now());
-            checkboxes[data.index] = data.checked;
-            
-            io.emit("server:checkbox:change", data);
         });
     });
 

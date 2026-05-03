@@ -334,7 +334,7 @@
 
     async function checkAuthStatus() {
         try {
-            const response = await fetch('/auth/status'); 
+            const response = await fetch('/o/auth/status'); 
             if (response.ok) {
                 isAuthenticated = true;
                 authUiLink.textContent = "CLEARANCE: GRANTED";

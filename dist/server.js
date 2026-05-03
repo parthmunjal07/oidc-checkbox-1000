@@ -12,7 +12,6 @@ import { db } from './db/index.js';
 async function main() {
     const app = express();
     app.use(express.json());
-    app.use(express.static(path.resolve('./public')));
     const server = http.createServer(app);
     const PORT = process.env.PORT || 8181;
     app.get('/health', (req, res) => {
@@ -24,7 +23,12 @@ async function main() {
     const rateLimitingHashMap = new Map();
     const io = new Server(server);
     io.use((socket, next) => {
-        const token = socket.handshake.auth.token;
+        let token = socket.handshake.auth.token;
+        if (!token && socket.handshake.headers.cookie) {
+            const match = socket.handshake.headers.cookie.match(new RegExp('(^| )token=([^;]+)'));
+            if (match)
+                token = match[2];
+        }
         if (!token) {
             return next(new Error("Authentication error: No token provided"));
         }
@@ -70,7 +74,7 @@ async function main() {
         const key = await jose.JWK.asKey(PUBLIC_KEY, "pem");
         return res.json({ keys: [key.toJSON()] });
     });
-    app.post("/o", authRouter);
+    app.use("/o/auth", authRouter);
     app.get("/o/userinfo", async (req, res) => {
         const authHeader = req.headers.authorization;
         if (!authHeader?.startsWith("Bearer ")) {

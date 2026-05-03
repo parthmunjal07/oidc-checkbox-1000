@@ -202,14 +202,14 @@
             const errorDiv = document.getElementById('error-message');
 
             try {
-                const response = await fetch('/auth/signup', {
+                const response = await fetch('/o/auth/signup', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ name, email, password })
                 });
 
                 if (response.ok) {
-                    window.location.href = '/public/authenticate.html';
+                    window.location.href = '/authenticate.html';
                 } else {
                     errorDiv.style.display = 'block';
                 }

@@ -5,9 +5,8 @@ import { usersTable } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import bcrypt from 'bcrypt'
 import type { JWTClaims } from "../utils/jwt.js";
-import * as JWT from 'jsonwebtoken' 
+import jwt from 'jsonwebtoken' 
 import { PRIVATE_KEY } from "../utils/cert.js";
-
 
 export const renderSignupPage = (req: Request, res: Response) => {
   res.sendFile(path.resolve('./public/signup.html')); 
@@ -49,8 +48,7 @@ export const handleSignIn = async (req: Request, res: Response) => {
         picture: user.profileImageURL ?? "",
   };
 
-  const token = JWT.sign(claims, PRIVATE_KEY, { algorithm: "RS256" });
-  
+  const token = jwt.sign(claims, PRIVATE_KEY, { algorithm: "RS256" });
   res.setHeader('Set-Cookie', `token=${token}; HttpOnly; Path=/; Max-Age=3600; SameSite=Strict`);
 
   return res.json({ token });
@@ -106,7 +104,7 @@ export const checkAuthStatus = async (req: Request, res: Response) => {
             return res.status(401).json({ message: "Unauthorized: No token provided" });
         }
 
-        JWT.verify(token, PRIVATE_KEY); 
+        jwt.verify(token, PRIVATE_KEY); 
 
         return res.status(200).json({ authenticated: true });
     } catch (error) {
